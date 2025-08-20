@@ -1,0 +1,45 @@
+name: Deploy Bike Map
+
+# 이 워크플로우를 매 5분마다 실행하도록 설정합니다.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  # 수동으로 워크플로우를 실행하고 싶을 때 사용
+  workflow_dispatch:
+
+# 실행할 작업들을 정의합니다.
+jobs:
+  build-and-deploy:
+    # 이 작업은 최신 우분투 환경에서 실행됩니다.
+    runs-on: ubuntu-latest
+    
+    # 작업에 필요한 단계들
+    steps:
+      # 1. 저장소 코드를 체크아웃합니다.
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. 파이썬 환경을 설정합니다.
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 3. 필요한 라이브러리들을 설치합니다.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas folium
+
+      # 4. 파이썬 스크립트를 실행해 HTML 파일을 생성합니다.
+      - name: Run Python script to create HTML file
+        env:
+          SEOUL_OPENAPI_KEY: ${{ secrets.SEOUL_OPENAPI_KEY }} # Secrets에서 API 키를 가져옵니다.
+        run: python create_map.py
+
+      # 5. 생성된 파일을 gh-pages 브랜치에 배포합니다.
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./ # 배포할 파일이 있는 디렉터리 (현재 경로)
